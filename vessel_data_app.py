@@ -228,7 +228,7 @@ def dashboard_2():
     fig = px.line(filtered_data, x='Date', y='Value', title='Value in $ Over Time', color_discrete_sequence=['red'])
     fig.update_xaxes(title_text='Date')
     fig.update_yaxes(title_text='Value ($)')
-    fig.update_layout(width=1200, height=1200)
+    #fig.update_layout(width=1200, height=1200)
     st.write(fig)
 
 
