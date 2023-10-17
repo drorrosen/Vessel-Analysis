@@ -102,7 +102,6 @@ def dashboard_1():
         fig5 = px.histogram(df, x='Vessel DWT', title='Distribution of Deadweight Tonnage (DWT)', nbins=50)
         fig5.update_xaxes(title_text='Deadweight Tonnage (DWT)')
         fig5.update_yaxes(title_text='Frequency')
-        #fig5.update_layout(width=1200, height=1200)
 
         st.write(fig5)
 
@@ -111,7 +110,6 @@ def dashboard_1():
         fig6 = px.histogram(df, x='Vessel Count', title='Distribution of Vessel Count', nbins=50)
         fig6.update_xaxes(title_text='Vessel Count')
         fig6.update_yaxes(title_text='Frequency')
-        #fig6.update_layout(width=1200, height=1200)
 
         st.write(fig6)
 
@@ -127,7 +125,6 @@ def dashboard_1():
         fig1 = px.line(df, x=df.index, y='Vessel Count', title='Vessel Count Over Time')
         fig1.update_xaxes(title_text='Date')
         fig1.update_yaxes(title_text='Vessel Count')
-        fig1.update_layout(width=1200, height=1200)
 
         st.write(fig1)
 
@@ -137,7 +134,6 @@ def dashboard_1():
         fig2 = px.line(df, x=df.index, y='Vessel Count Difference', title='Vessel Count Difference Over Time', color_discrete_sequence=['red'])
         fig2.update_xaxes(title_text='Date')
         fig2.update_yaxes(title_text='Vessel Count Difference')
-        fig2.update_layout(width=1200, height=1200)
 
         st.write(fig2)
 
@@ -152,7 +148,6 @@ def dashboard_1():
         fig3 = px.line(df, x=df.index, y='Vessel DWT', title='Deadweight Tonnage (DWT) Over Time')
         fig3.update_xaxes(title_text='Date')
         fig3.update_yaxes(title_text='Deadweight Tonnage (DWT)')
-        fig3.update_layout(width=1200, height=1200)
 
         st.write(fig3)
 
@@ -163,7 +158,6 @@ def dashboard_1():
         fig4 = px.line(df, x=df.index, y='Vessel DWT Difference', title='Vessel DWT Difference Over Time', color_discrete_sequence=['red'])
         fig4.update_xaxes(title_text='Date')
         fig4.update_yaxes(title_text='Vessel DWT Difference')
-        #fig4.update_layout(width=1200, height=1200)
 
         st.write(fig4)
 
@@ -177,7 +171,6 @@ def dashboard_1():
     fig5 = px.scatter(df, x='Vessel Count', y='Vessel DWT', title=f'Correlation Between DWT and Vessel Count Over Time (Correlation: {correlation_value:.2f})')
     fig5.update_xaxes(title_text='Vessel Count')
     fig5.update_yaxes(title_text='Deadweight Tonnage (DWT)')
-    #fig5.update_layout(width=1200, height=1200)
 
     st.write(fig5)
 
