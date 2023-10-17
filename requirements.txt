@@ -1,3 +1,6 @@
 plotly
 pandas
 openpyxl
+numpy
+scipy
+stats
