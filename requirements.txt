@@ -2,5 +2,6 @@ plotly
 pandas
 openpyxl
 numpy
+scipy
 
 
