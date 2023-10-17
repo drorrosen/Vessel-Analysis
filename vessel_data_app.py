@@ -127,7 +127,7 @@ def dashboard_1():
         fig1 = px.line(df, x=df.index, y='Vessel Count', title='Vessel Count Over Time')
         fig1.update_xaxes(title_text='Date')
         fig1.update_yaxes(title_text='Vessel Count')
-        #fig1.update_layout(width=1200, height=1200)
+        fig1.update_layout(width=1200, height=1200)
 
         st.write(fig1)
 
@@ -137,7 +137,7 @@ def dashboard_1():
         fig2 = px.line(df, x=df.index, y='Vessel Count Difference', title='Vessel Count Difference Over Time', color_discrete_sequence=['red'])
         fig2.update_xaxes(title_text='Date')
         fig2.update_yaxes(title_text='Vessel Count Difference')
-        #fig2.update_layout(width=1200, height=1200)
+        fig2.update_layout(width=1200, height=1200)
 
         st.write(fig2)
 
@@ -152,7 +152,7 @@ def dashboard_1():
         fig3 = px.line(df, x=df.index, y='Vessel DWT', title='Deadweight Tonnage (DWT) Over Time')
         fig3.update_xaxes(title_text='Date')
         fig3.update_yaxes(title_text='Deadweight Tonnage (DWT)')
-        #fig3.update_layout(width=1200, height=1200)
+        fig3.update_layout(width=1200, height=1200)
 
         st.write(fig3)
 
@@ -200,11 +200,16 @@ def dashboard_2():
     baltic_exchange_data_file = 'BALTIC EXCHANGE DATA s1c58 2022.xlsx'
 
     # Step 1: Data Loading
-    s4a_58_df = pd.read_excel(s4a_58_file, parse_dates=['Date'])
-    s4a_58_df.drop_duplicates(keep='first', inplace=True)
+    try:
+        s4a_58_df = pd.read_excel(s4a_58_file, parse_dates=['Date'])
+        s4a_58_df.drop_duplicates(keep='first', inplace=True)
 
-    baltic_exchange_data_df = pd.read_excel(baltic_exchange_data_file,parse_dates=['Date'])
-    baltic_exchange_data_df.drop_duplicates(keep='first', inplace=True)
+        baltic_exchange_data_df = pd.read_excel(baltic_exchange_data_file,parse_dates=['Date'])
+        baltic_exchange_data_df.drop_duplicates(keep='first', inplace=True)
+
+    except Exception as e:
+        print(f"An error occurred while loading the datasets: {e}")
+
 
     combined_df = pd.concat([s4a_58_df, baltic_exchange_data_df])
 
@@ -239,13 +244,117 @@ def dashboard_2():
 
 
 
+def dashboard_3():
+    import pandas as pd
+    import plotly.express as px
+    import streamlit as st
+    from scipy import stats
+    import numpy as np
+
+    #read daily file
+    @st.cache_data
+    def load_data():
+        df = pd.read_csv('daily_panama.csv')
+        return df
+    df = load_data()
+    df['DIRECTION (N/S)'] = df['DIRECTION (N/S)'].str.lower()
+    df.rename(columns={'DIRECTION (N/S)': 'DIRECTION'}, inplace=True)
+
+    #--- SIDEBAR ---
+    st.sidebar.header('Please Filter Here:')
+    year = st.sidebar.multiselect('Select Year',
+                                  options=df['YEAR'].unique(),
+                                  default=df['YEAR'].unique())
+
+    direction = st.sidebar.multiselect('Select Direction',
+                                        options=df['DIRECTION'].unique(),
+                                       default=df['DIRECTION'].unique())
+
+
+    df_selection = df.query(
+        "DIRECTION == @direction & YEAR == @year"
+    )
+
+    # ---- MAINPAGE ----
+    st.title(":PANAMA Dashboard: Analysis")
+    st.markdown("##")
+    st.dataframe(df_selection)
+
+    df_selection.drop(['DIRECTION','YEAR'], axis=1)
+
+    agg_df_selection = df_selection.groupby(['TRANSIT DATE']).agg({
+        'WAITING TIME': 'median',
+        'BEAM (pies)': 'median',
+        'DRAF (Pies)': 'median',
+        'transit_booking_days': 'median',
+
+    }).reset_index()
+
+    # Calculate Z-scores
+    z_scores = np.abs(stats.zscore(agg_df_selection['WAITING TIME'].dropna()))
+
+    # Get boolean array indicating the presence of outliers
+    outliers = (z_scores > 3)
+
+    # Indices of outliers
+    outlier_indices = np.where(outliers)[0]
+
+    # Values of outliers
+    outlier_values = agg_df_selection['WAITING TIME'].dropna().iloc[outlier_indices]
+
+    # Removing the outliers from the 'WAITING TIME' column
+    agg_df_selection = agg_df_selection.drop(outlier_values.index)
+
+
+
+
+
+    st.subheader('Time series Plots')
+    # create two columns for charts
+    fig_col1, fig_col2 = st.columns(2)
+
+    with fig_col1:
+        # Display plot using Plotly Express
+        fig = px.line(agg_df_selection, x='TRANSIT DATE', y='WAITING TIME', title='TRANSIT DATE VS WAITING TIME', color_discrete_sequence=['red'])
+        fig.update_xaxes(title_text='Transit Date')
+        fig.update_yaxes(title_text='Median Waiting Time (days)')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
+
+    with fig_col2:
+        # Display plot using Plotly Express
+        fig = px.line(agg_df_selection, x='TRANSIT DATE', y='BEAM (pies)', title='TRANSIT DATE VS BEAM (pies)', color_discrete_sequence=['red'])
+        fig.update_xaxes(title_text='Transit Date')
+        fig.update_yaxes(title_text='Median Beam (pies)')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
+
+    # create two columns for charts
+    fig_col11, fig_col12 = st.columns(2)
+
+    with fig_col11:
+        # Display plot using Plotly Express
+        fig = px.line(agg_df_selection, x='TRANSIT DATE', y='DRAF (Pies)', title='TRANSIT DATE VS DRAF (Pies)', color_discrete_sequence=['red'])
+        fig.update_xaxes(title_text='Transit Date')
+        fig.update_yaxes(title_text='Median DRAF (Pies)')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
+
+    with fig_col12:
+        # Display plot using Plotly Express
+        fig = px.line(agg_df_selection, x='TRANSIT DATE', y='transit_booking_days', title='TRANSIT DATE VS transit_booking_days', color_discrete_sequence=['red'])
+        fig.update_xaxes(title_text='Transit Date')
+        fig.update_yaxes(title_text='Median transit_booking_days')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
 
 
 
 page_names_to_funcs = {
     "Introduction": intro,
     "historical tonnage counts USG Dashboard": dashboard_1,
-    "Shipping Route Analytics Dashboard": dashboard_2
+    "Shipping Route Analytics Dashboard": dashboard_2,
+    "Panama Analysis": dashboard_3
 
 }
 
