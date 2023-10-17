@@ -364,7 +364,7 @@ def dashboard_3():
         x=correlation_matrix.columns,
         y=correlation_matrix.columns,
         hoverongaps = False,
-        colorscale='Viridis'))
+        colorscale='YlOrRd'))
 
     # Customize the layout
     fig.update_layout(
