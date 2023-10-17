@@ -350,6 +350,37 @@ def dashboard_3():
 
 
 
+    st.divider()
+
+    st.subheader('Correlation Heatmap between variables')
+    import plotly.graph_objects as go
+
+    # Calculate the correlation matrix
+    correlation_matrix = agg_df_selection[['DRAF (Pies)', 'BEAM (pies)', 'WAITING TIME', 'transit_booking_days']].corr()
+
+    # Create the heatmap
+    fig = go.Figure(data=go.Heatmap(
+        z=correlation_matrix,
+        x=correlation_matrix.columns,
+        y=correlation_matrix.columns,
+        hoverongaps = False,
+        colorscale='Viridis'))
+
+    # Customize the layout
+    fig.update_layout(
+        title='Correlation Heatmap',
+        xaxis=dict(title='Variables'),
+        yaxis=dict(title='Variables')
+    )
+
+    # Show the plot
+    fig.update_layout(width=1200, height=1200)
+
+    st.write(fig)
+
+
+
+
 page_names_to_funcs = {
     "Introduction": intro,
     "historical tonnage counts USG Dashboard": dashboard_1,
