@@ -374,7 +374,7 @@ def dashboard_3():
     )
 
     # Show the plot
-    fig.update_layout(width=1200, height=1200)
+    fig.update_layout(width=600, height=600)
 
     st.write(fig)
 
