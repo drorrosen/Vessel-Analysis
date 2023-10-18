@@ -102,6 +102,7 @@ def dashboard_1():
         fig5 = px.histogram(df, x='Vessel DWT', title='Distribution of Deadweight Tonnage (DWT)', nbins=50)
         fig5.update_xaxes(title_text='Deadweight Tonnage (DWT)')
         fig5.update_yaxes(title_text='Frequency')
+        #fig5.update_layout(width=1200, height=1200)
 
         st.write(fig5)
 
@@ -110,6 +111,7 @@ def dashboard_1():
         fig6 = px.histogram(df, x='Vessel Count', title='Distribution of Vessel Count', nbins=50)
         fig6.update_xaxes(title_text='Vessel Count')
         fig6.update_yaxes(title_text='Frequency')
+        #fig6.update_layout(width=1200, height=1200)
 
         st.write(fig6)
 
@@ -125,6 +127,7 @@ def dashboard_1():
         fig1 = px.line(df, x=df.index, y='Vessel Count', title='Vessel Count Over Time')
         fig1.update_xaxes(title_text='Date')
         fig1.update_yaxes(title_text='Vessel Count')
+        fig1.update_layout(width=1200, height=1200)
 
         st.write(fig1)
 
@@ -134,6 +137,7 @@ def dashboard_1():
         fig2 = px.line(df, x=df.index, y='Vessel Count Difference', title='Vessel Count Difference Over Time', color_discrete_sequence=['red'])
         fig2.update_xaxes(title_text='Date')
         fig2.update_yaxes(title_text='Vessel Count Difference')
+        fig2.update_layout(width=1200, height=1200)
 
         st.write(fig2)
 
@@ -148,6 +152,7 @@ def dashboard_1():
         fig3 = px.line(df, x=df.index, y='Vessel DWT', title='Deadweight Tonnage (DWT) Over Time')
         fig3.update_xaxes(title_text='Date')
         fig3.update_yaxes(title_text='Deadweight Tonnage (DWT)')
+        fig3.update_layout(width=1200, height=1200)
 
         st.write(fig3)
 
@@ -158,6 +163,7 @@ def dashboard_1():
         fig4 = px.line(df, x=df.index, y='Vessel DWT Difference', title='Vessel DWT Difference Over Time', color_discrete_sequence=['red'])
         fig4.update_xaxes(title_text='Date')
         fig4.update_yaxes(title_text='Vessel DWT Difference')
+        #fig4.update_layout(width=1200, height=1200)
 
         st.write(fig4)
 
@@ -171,6 +177,7 @@ def dashboard_1():
     fig5 = px.scatter(df, x='Vessel Count', y='Vessel DWT', title=f'Correlation Between DWT and Vessel Count Over Time (Correlation: {correlation_value:.2f})')
     fig5.update_xaxes(title_text='Vessel Count')
     fig5.update_yaxes(title_text='Deadweight Tonnage (DWT)')
+    #fig5.update_layout(width=1200, height=1200)
 
     st.write(fig5)
 
@@ -280,8 +287,10 @@ def dashboard_3():
         'BEAM (pies)': 'median',
         'DRAF (Pies)': 'median',
         'transit_booking_days': 'median',
+        'TRANSIT DATE': 'count'
 
-    }).reset_index()
+    }).rename(columns={'TRANSIT DATE': 'SHIP_COUNT'}).reset_index()
+
 
     # Calculate Z-scores
     z_scores = np.abs(stats.zscore(agg_df_selection['WAITING TIME'].dropna()))
@@ -342,6 +351,16 @@ def dashboard_3():
         st.write(fig)
 
 
+    # create two columns for charts
+    fig_col41, fig_col42 = st.columns(2)
+
+    with fig_col41:
+        # Display plot using Plotly Express
+        fig = px.line(agg_df_selection, x='TRANSIT DATE', y='SHIP_COUNT', title='TRANSIT DATE VS ship_count', color_discrete_sequence=['red'])
+        fig.update_xaxes(title_text='Transit Date')
+        fig.update_yaxes(title_text='Median SHIP_COUNT')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
 
     st.divider()
 
@@ -349,7 +368,7 @@ def dashboard_3():
     import plotly.graph_objects as go
 
     # Calculate the correlation matrix
-    correlation_matrix = agg_df_selection[['DRAF (Pies)', 'BEAM (pies)', 'WAITING TIME', 'transit_booking_days']].corr()
+    correlation_matrix = agg_df_selection[['DRAF (Pies)', 'BEAM (pies)', 'WAITING TIME', 'transit_booking_days', 'SHIP_COUNT']].corr()
 
     # Create the heatmap
     fig = go.Figure(data=go.Heatmap(
@@ -367,10 +386,93 @@ def dashboard_3():
     )
 
     # Show the plot
-    fig.update_layout(width=600, height=600)
+    fig.update_layout(width=1200, height=1200)
 
     st.write(fig)
 
+    st.divider()
+    st.subheader('Seasonal Patterns related to congestion')
+    # Convert 'TRANSIT DATE' to datetime format
+    agg_df_selection['TRANSIT DATE'] = pd.to_datetime(agg_df_selection['TRANSIT DATE'])
+
+    # Extract month and year from 'TRANSIT DATE'
+    agg_df_selection['MONTH'] = agg_df_selection['TRANSIT DATE'].dt.month
+    # Extract day of the week from 'TRANSIT DATE'
+    # Monday is 0 and Sunday is 6
+    agg_df_selection['DAY_OF_WEEK'] = agg_df_selection['TRANSIT DATE'].dt.dayofweek
+
+    # Extract the quarter and store it in a new column 'QUARTER'
+    agg_df_selection['QUARTER'] = agg_df_selection['TRANSIT DATE'].dt.to_period("Q")
+    agg_df_selection['QUARTER'] = agg_df_selection['QUARTER'].astype(str)
+
+    # Group data by month and year, then calculate the median waiting time for each group
+    grouped_df_waiting_time = agg_df_selection.groupby(['MONTH'])['WAITING TIME'].median().reset_index()
+    grouped_df_ship_count = agg_df_selection.groupby(['MONTH'])['SHIP_COUNT'].median().reset_index()
+
+    # create two columns for charts
+    fig_col51, fig_col52 = st.columns(2)
+
+    with fig_col51:
+        # Display plot using Plotly Express
+        fig = px.line(grouped_df_waiting_time, x='MONTH', y='WAITING TIME', title='Monthly Seasonal Patterns in Canal Congestion (Median Waiting Time)', color_discrete_sequence=['red'])
+        fig.update_xaxes(title_text='Month')
+        fig.update_yaxes(title_text='Median Waiting Time (months)')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
+
+    with fig_col52:
+        # Display plot using Plotly Express
+        fig = px.line(grouped_df_ship_count, x='MONTH', y='SHIP_COUNT', title='Monthly Seasonal Patterns in Canal Congestion (Median Ship Count)', color_discrete_sequence=['red'])
+        fig.update_xaxes(title_text='Month')
+        fig.update_yaxes(title_text='Median Ship Count')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
+
+    # Group data by dayofweek, then calculate the median waiting time for each group
+    grouped_df_waiting_time_dowk = agg_df_selection.groupby(['DAY_OF_WEEK'])['WAITING TIME'].median().reset_index()
+    grouped_df_ship_count_dowk = agg_df_selection.groupby(['DAY_OF_WEEK'])['SHIP_COUNT'].median().reset_index()
+
+    # create two columns for charts
+    fig_col61, fig_col62 = st.columns(2)
+
+    with fig_col61:
+        # Display plot using Plotly Express
+        fig = px.line(grouped_df_waiting_time_dowk, x='DAY_OF_WEEK', y='WAITING TIME', title='Weekly Seasonal Patterns in Canal Congestion (Median Waiting Time)', color_discrete_sequence=['red'])
+        fig.update_xaxes(title_text='Day of Week')
+        fig.update_yaxes(title_text='Median Waiting Time (days)')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
+
+    with fig_col62:
+        # Display plot using Plotly Express
+        fig = px.line(grouped_df_ship_count_dowk, x='DAY_OF_WEEK', y='SHIP_COUNT', title='Weekly Seasonal Patterns in Canal Congestion (Median Ship Count)', color_discrete_sequence=['red'])
+        fig.update_xaxes(title_text='Day of Week')
+        fig.update_yaxes(title_text='Median Ship Count')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
+
+    # Group data by quarter, then calculate the median waiting time for each group
+    grouped_df_waiting_time_quarter = agg_df_selection.groupby(['QUARTER'])['WAITING TIME'].median().reset_index()
+    grouped_df_ship_count_quarter = agg_df_selection.groupby(['QUARTER'])['SHIP_COUNT'].median().reset_index()
+
+    # create two columns for charts
+    fig_col71, fig_col72 = st.columns(2)
+
+    with fig_col71:
+        # Display plot using Plotly Express
+        fig = px.line(grouped_df_waiting_time_quarter, x='QUARTER', y='WAITING TIME', title='Quarterly Seasonal Patterns in Canal Congestion (Median Waiting Time)', color_discrete_sequence=['red'])
+        fig.update_xaxes(title_text='Quarter')
+        fig.update_yaxes(title_text='Median Waiting Time (Quarter)')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
+
+    with fig_col72:
+        # Display plot using Plotly Express
+        fig = px.line(grouped_df_ship_count_quarter, x='QUARTER', y='SHIP_COUNT', title='Quarterly Seasonal Patterns in Canal Congestion (Median Ship Count)', color_discrete_sequence=['red'])
+        fig.update_xaxes(title_text='Quarter')
+        fig.update_yaxes(title_text='Median Ship Count')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
 
 
 
