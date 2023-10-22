@@ -282,15 +282,30 @@ def dashboard_3():
 
     df_selection.drop(['DIRECTION','YEAR'], axis=1)
 
+    # Function to calculate IQR
+    def calculate_iqr(series):
+        Q3 = series.quantile(0.75)
+        Q1 = series.quantile(0.25)
+        IQR = Q3 - Q1
+        return IQR
+
+    # Calculate the IQR for each 'TRANSIT DATE'
+    iqr_series = df.groupby('TRANSIT DATE')['WAITING TIME'].apply(calculate_iqr).reset_index()
+    iqr_series.rename(columns={'WAITING TIME': 'IQR'}, inplace=True)
+
+
+
     agg_df_selection = df_selection.groupby(['TRANSIT DATE']).agg({
-        'WAITING TIME': 'median',
-        'BEAM (pies)': 'median',
-        'DRAF (Pies)': 'median',
-        'transit_booking_days': 'median',
-        'TRANSIT DATE': 'count'
+            'WAITING TIME': 'median',
+            'BEAM (pies)': 'median',
+            'DRAF (Pies)': 'median',
+            'transit_booking_days': 'median',
+            'TRANSIT DATE': 'count'
 
     }).rename(columns={'TRANSIT DATE': 'SHIP_COUNT'}).reset_index()
 
+
+    agg_df_selection['iqr_waiting_time'] = iqr_series['IQR']
 
     # Calculate Z-scores
     z_scores = np.abs(stats.zscore(agg_df_selection['WAITING TIME'].dropna()))
@@ -306,6 +321,7 @@ def dashboard_3():
 
     # Removing the outliers from the 'WAITING TIME' column
     agg_df_selection = agg_df_selection.drop(outlier_values.index)
+
 
 
 
@@ -359,6 +375,14 @@ def dashboard_3():
         fig = px.line(agg_df_selection, x='TRANSIT DATE', y='SHIP_COUNT', title='TRANSIT DATE VS ship_count', color_discrete_sequence=['red'])
         fig.update_xaxes(title_text='Transit Date')
         fig.update_yaxes(title_text='Median SHIP_COUNT')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
+
+    with fig_col42:
+        # Display plot using Plotly Express
+        fig = px.line(agg_df_selection, x='TRANSIT DATE', y='iqr_waiting_time', title='TRANSIT DATE VS iqr_waiting_time', color_discrete_sequence=['red'])
+        fig.update_xaxes(title_text='Transit Date')
+        fig.update_yaxes(title_text='Median iqr_waiting_time')
         #fig.update_layout(width=1200, height=1200)
         st.write(fig)
 
@@ -432,6 +456,8 @@ def dashboard_3():
     grouped_df_waiting_time_dowk = agg_df_selection.groupby(['DAY_OF_WEEK'])['WAITING TIME'].median().reset_index()
     grouped_df_ship_count_dowk = agg_df_selection.groupby(['DAY_OF_WEEK'])['SHIP_COUNT'].median().reset_index()
 
+
+
     # create two columns for charts
     fig_col61, fig_col62 = st.columns(2)
 
@@ -476,6 +502,135 @@ def dashboard_3():
 
 
 
+    st.divider()
+    st.subheader('Comparison between directions')
+
+    # Group data by direction, then calculate the median waiting time for each group
+    grouped_df_waiting_time_direction = df_selection.groupby(['TRANSIT DATE','DIRECTION'])['WAITING TIME'].median().reset_index()
+    grouped_df_ship_count_direction = df_selection.groupby(['TRANSIT DATE','DIRECTION'])['YEAR'].count().reset_index()
+    grouped_df_beam_direction = df_selection.groupby(['TRANSIT DATE','DIRECTION'])['BEAM (pies)'].median().reset_index()
+    grouped_df_draf_direction = df_selection.groupby(['TRANSIT DATE','DIRECTION'])['DRAF (Pies)'].median().reset_index()
+
+
+    # create two columns for charts
+    fig_col81, fig_col82 = st.columns(2)
+
+    with fig_col81:
+        # Display plot using Plotly Express
+        fig = px.line(grouped_df_waiting_time_direction, x='TRANSIT DATE', y='WAITING TIME', color='DIRECTION', title='Directional Patterns in Canal Congestion (Median Waiting Time)', color_discrete_sequence=['orange', 'blue'])
+        fig.update_xaxes(title_text='Direction')
+        fig.update_yaxes(title_text='Median Waiting Time (days)')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
+
+    with fig_col82:
+        # Display plot using Plotly Express
+        fig = px.line(grouped_df_ship_count_direction, x='TRANSIT DATE', y='YEAR', color='DIRECTION', title='Directional Patterns in Canal Congestion (Ship Count)', color_discrete_sequence=['orange', 'blue'])
+        fig.update_xaxes(title_text='Direction')
+        fig.update_yaxes(title_text='Median Ship Count')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
+
+    #create two columns for charts
+    fig_col91, fig_col92 = st.columns(2)
+
+    #plotting comparisons between directions for beam and draf
+    with fig_col91:
+        fig = px.line(grouped_df_beam_direction, x='TRANSIT DATE', y='BEAM (pies)', color='DIRECTION', title='Directional Patterns in Median Beam (pies)', color_discrete_sequence=['orange', 'blue'])
+        fig.update_xaxes(title_text='Direction')
+        fig.update_yaxes(title_text='Median Beam (pies)')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
+
+    with fig_col92:
+        fig = px.line(grouped_df_draf_direction, x='TRANSIT DATE', y='DRAF (Pies)', color='DIRECTION', title='Directional Patterns in Median Draf (pies)', color_discrete_sequence=['orange', 'blue'])
+        fig.update_xaxes(title_text='Direction')
+        fig.update_yaxes(title_text='Median Draf (pies)')
+        #fig.update_layout(width=1200, height=1200)
+        st.write(fig)
+
+
+    #Correlations between directions - all variables
+    st.divider()
+    st.subheader('Correlations between directions')
+
+    #corr between median waiting times of southbound and northbound, using the file grouped_df_waiting_time_direction
+    pivot_df = grouped_df_waiting_time_direction.pivot(index='TRANSIT DATE', columns='DIRECTION', values='WAITING TIME').reset_index()
+    correlation_between_directions = pivot_df['northbound'].corr(pivot_df['southbound'], method='spearman')
+    st.write('''Correlation between northbound and southbound waiting times: ''',round(correlation_between_directions,2))
+
+    #corr between median ship counts of southbound and northbound, using the file grouped_df_ship_count_direction
+    pivot_df = grouped_df_ship_count_direction.pivot(index='TRANSIT DATE', columns='DIRECTION', values='YEAR').reset_index()
+    correlation_between_directions = pivot_df['northbound'].corr(pivot_df['southbound'], method='spearman')
+    st.write('''Correlation between northbound and southbound ship counts: ''',round(correlation_between_directions,2))
+
+    #corr between median beam of southbound and northbound, using the file grouped_df_beam_direction
+    pivot_df = grouped_df_beam_direction.pivot(index='TRANSIT DATE', columns='DIRECTION', values='BEAM (pies)').reset_index()
+    correlation_between_directions = pivot_df['northbound'].corr(pivot_df['southbound'], method='spearman')
+    st.write('''Correlation between northbound and southbound beam: ''',round(correlation_between_directions,2))
+
+    #corr between median draf of southbound and northbound, using the file grouped_df_draf_direction
+    pivot_df = grouped_df_draf_direction.pivot(index='TRANSIT DATE', columns='DIRECTION', values='DRAF (Pies)').reset_index()
+    correlation_between_directions = pivot_df['northbound'].corr(pivot_df['southbound'], method='spearman')
+    st.write('''Correlation between northbound and southbound draf: ''',round(correlation_between_directions,2))
+
+
+    #southbound dataset to download - cannal_congestion medians for southbound -
+    # Group data by direction southbound, then calculate the median waiting time for each group
+    df_southbound = df_selection[df_selection['DIRECTION'] == 'southbound']
+    grouped_df_waiting_time_direction_southbound = df_southbound.groupby(['TRANSIT DATE'])['WAITING TIME'].median().reset_index()
+    grouped_df_ship_count_direction_southbound = df_southbound.groupby(['TRANSIT DATE'])['YEAR'].count().reset_index()
+    grouped_df_beam_direction_southbound = df_southbound.groupby(['TRANSIT DATE'])['BEAM (pies)'].median().reset_index()
+    grouped_df_draf_direction_southbound = df_southbound.groupby(['TRANSIT DATE'])['DRAF (Pies)'].median().reset_index()
+
+    #merge these series to one dataset
+    merged_df_southbound = pd.merge(grouped_df_waiting_time_direction_southbound, grouped_df_ship_count_direction_southbound, on='TRANSIT DATE')
+    merged_df_southbound = pd.merge(merged_df_southbound, grouped_df_beam_direction_southbound, on='TRANSIT DATE')
+    merged_df_southbound = pd.merge(merged_df_southbound, grouped_df_draf_direction_southbound, on='TRANSIT DATE')
+    merged_df_southbound.rename(columns={'WAITING TIME': 'WAITING TIME SOUTHBOUND', 'YEAR': 'SHIP COUNT SOUTHBOUND', 'BEAM (pies)': 'BEAM SOUTHBOUND', 'DRAF (Pies)': 'DRAF SOUTHBOUND'}, inplace=True)
+
+
+
+    #northbound dataset to download - cannal_congestion medians for northbound -
+    # Group data by direction northbound, then calculate the median waiting time for each group
+    df_northbound = df_selection[df_selection['DIRECTION'] == 'northbound']
+    grouped_df_waiting_time_direction_northbound = df_northbound.groupby(['TRANSIT DATE'])['WAITING TIME'].median().reset_index()
+    grouped_df_ship_count_direction_northbound = df_northbound.groupby(['TRANSIT DATE'])['YEAR'].count().reset_index()
+    grouped_df_beam_direction_northbound = df_northbound.groupby(['TRANSIT DATE'])['BEAM (pies)'].median().reset_index()
+    grouped_df_draf_direction_northbound = df_northbound.groupby(['TRANSIT DATE'])['DRAF (Pies)'].median().reset_index()
+
+    #merge these series to one dataset
+    merged_df_northbound = pd.merge(grouped_df_waiting_time_direction_northbound, grouped_df_ship_count_direction_northbound, on='TRANSIT DATE')
+    merged_df_northbound = pd.merge(merged_df_northbound, grouped_df_beam_direction_northbound, on='TRANSIT DATE')
+    merged_df_northbound = pd.merge(merged_df_northbound, grouped_df_draf_direction_northbound, on='TRANSIT DATE')
+    merged_df_northbound.rename(columns={'WAITING TIME': 'WAITING TIME NORTHBOUND', 'YEAR': 'SHIP COUNT NORTHBOUND', 'BEAM (pies)': 'BEAM NORTHBOUND', 'DRAF (Pies)': 'DRAF NORTHBOUND'}, inplace=True)
+
+    #concatenate the two datasets
+    merged_df = pd.merge(merged_df_southbound, merged_df_northbound, on='TRANSIT DATE')
+
+    merged_df.to_csv('merged_df_direction_panama.csv')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 page_names_to_funcs = {
     "Introduction": intro,
     "historical tonnage counts USG Dashboard": dashboard_1,
@@ -487,3 +642,5 @@ page_names_to_funcs = {
 dashboard_name = st.sidebar.selectbox("Choose a dashboard", page_names_to_funcs.keys())
 page_names_to_funcs[dashboard_name]()
 #%%
+
+
